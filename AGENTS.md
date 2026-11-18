@@ -423,6 +423,36 @@ status_db=true
 
 Se `status_db=false`, a mensagem deve continuar pendente.
 
+### AnalysisDetailCache (solucao provisoria: analise detalhada no Historico)
+
+Problema: o detalhe de uma mensagem aberta pelo Historico (`GET /logs`) nao tinha "Analise
+detalhada" nem "Sinais encontrados". O `POST /detect` devolve `raciocinio` e `indicadores`, mas o
+registro do historico so traz o veredito curto (`explanation`); o app le em `parseLogs` apenas os
+campos que o `/logs` devolve. Necessita validacao: confirmar na Lambda/DynamoDB de producao que esses
+dois campos nao sao gravados nem devolvidos (o clone local do backend esta desatualizado e nao serve
+de prova).
+
+O que faz: `data/local/cache/AnalysisDetailCache.kt` guarda no aparelho (SharedPreferences
+`analysis_detail_cache.xml`) o raciocinio e os indicadores de cada `/detect` (analise manual e captura
+automatica, gravados em `MessageRepository.cacheDetail`). `RemoteFraudLog.toDetail()` consulta o cache
+pelo hash (SHA-1) do texto normalizado e preenche as duas secoes. Falha do cache nunca derruba o envio
+(`runCatching`, log sem conteudo).
+
+Limites:
+- so existe neste aparelho (outros celulares, mesmo da mesma conta, nao veem);
+- so vale para mensagens analisadas depois desta versao; as antigas nao tem como ser recuperadas
+  (o dado nunca foi gravado); reenviar o texto ao `/detect` duplicaria o registro;
+- apagado no logout (`AnalysisDetailCache.clear()` em `AccountUi`);
+- fora do backup e da transferencia de aparelho (`data_extraction_rules.xml`), pois o raciocinio cita
+  trechos das mensagens (nomes, valores, Pix);
+- maximo de 300 entradas; ao passar, saem as de menor contador (`evict`);
+- nao e historico oficial e nao muda o schema do Room.
+
+Correcao definitiva (depende do backend, Mitchell): a Lambda gravar `raciocinio` e `indicadores` no
+DynamoDB e devolve-los no `GET /logs`; o app passar a le-los em `FraudApiClient.parseLogs`
+(`RemoteFraudLog`) e o cache poder ser removido. Necessita validacao: nomes dos campos no item do
+DynamoDB.
+
 ## UI Android
 
 A tela principal deve:

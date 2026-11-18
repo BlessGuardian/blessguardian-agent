@@ -7,6 +7,8 @@
    - database: contatos confiaveis e historico de ligacoes.
 
    Fica FORA: sharedpref auth_session.xml (token JWT da conta). Ao reinstalar, entra de novo.
+   Tambem fica FORA: sharedpref analysis_detail_cache.xml (cache local do raciocinio e dos sinais
+   da LLM, que citam trechos de mensagens com nomes, valores e Pix; nao deve sair do aparelho).
 
    A fila PENDING fica no mesmo banco, mas NAO e reenviada: na primeira execucao de cada
    instalacao (marcador em noBackupFilesDir) o MessageRepository descarta os PENDING restaurados,
@@ -16,11 +18,13 @@
     <cloud-backup>
         <include domain="sharedpref" path="." />
         <exclude domain="sharedpref" path="auth_session.xml" />
+        <exclude domain="sharedpref" path="analysis_detail_cache.xml" />
         <include domain="database" path="." />
     </cloud-backup>
     <device-transfer>
         <include domain="sharedpref" path="." />
         <exclude domain="sharedpref" path="auth_session.xml" />
+        <exclude domain="sharedpref" path="analysis_detail_cache.xml" />
         <include domain="database" path="." />
     </device-transfer>
 </data-extraction-rules>
