@@ -314,11 +314,11 @@ fun AnalysisDetailSheet(detail: AnalysisDetail, onDismiss: () -> Unit) {
                 }
             }
 
-            // Comite de algoritmos: so no modo tecnico (para o leigo, dois votos diferentes confundem).
-            detail.hybrid?.takeIf { LocalTechnicalMode.current }?.let { hybrid ->
-                DetailSection(title = "Como foi decidido") {
-                    DecisionRow("Inteligência artificial", hybrid.llm)
-                    DecisionRow("Modelo local", hybrid.localModel)
+            // Comite de algoritmos: aparece sempre que houver veredito hibrido (Modelo Gemma x Modelo Proprio).
+            detail.hybrid?.let { hybrid ->
+                DetailSection(title = "Qual modelo indicou o quê") {
+                    DecisionRow("Modelo Gemma", hybrid.llm)
+                    DecisionRow("Modelo Próprio", hybrid.localModel)
                     DecisionRow("Veredito final", hybrid.status?.lowercase()?.replaceFirstChar { it.titlecase(ptBR) })
                 }
             }
