@@ -11,6 +11,7 @@ import com.example.antifraudagent.data.local.entity.MessageSource
 import com.example.antifraudagent.data.local.entity.MessageStatus
 import com.example.antifraudagent.data.local.preprocessing.LocalMessagePreprocessor
 import com.example.antifraudagent.data.remote.FraudApiClient
+import com.example.antifraudagent.data.local.cache.AnalysisDetailCache
 import com.example.antifraudagent.data.remote.FraudAnalysisResult
 import com.example.antifraudagent.data.remote.FraudApiHttpException
 import com.example.antifraudagent.data.remote.RemoteFraudLog
@@ -43,6 +44,10 @@ class MessageRepository(context: Context) {
     private val deviceId = DeviceIdentityProvider.getDeviceId(appContext)
     private val settings = SettingsRepository.getInstance(appContext)
     private val trustedContacts = TrustedContactRepository(appContext)
+
+    init {
+        AnalysisDetailCache.init(appContext)
+    }
 
     companion object {
         private const val TAG = "MessageRepository"
@@ -185,10 +190,10 @@ class MessageRepository(context: Context) {
                 messageContent = trimmedContent,
                 source = MessageSource.MANUAL
             )
-
             if (!result.dbSynced) {
                 throw IOException("Servidor analisou a mensagem, mas nao confirmou gravacao no historico oficial")
             }
+            cacheDetail(trimmedContent, result)
 
             result
         }
@@ -270,30 +275,39 @@ class MessageRepository(context: Context) {
             messageContent = message.content,
             source = message.source
         )
-
         if (!result.dbSynced) {
             throw IOException("Servidor analisou a mensagem, mas nao confirmou gravacao no historico oficial")
         }
 
-        if (result.isFraud) {
-            // Contato confiavel continua analisado, mas so alerta em alto risco (conta clonada).
-            val fromTrusted = trustedContacts.isTrusted(message.sender)
-            if (fromTrusted && result.riskLevel != RiskLevel.HIGH) {
-                Log.d(TAG, "Atencao de contato confiavel; alerta suprimido")
-                return
+        try {
+            if (result.isFraud) {
+                // Contato confiavel continua analisado, mas so alerta em alto risco (conta clonada).
+                val fromTrusted = trustedContacts.isTrusted(message.sender)
+                if (fromTrusted && result.riskLevel != RiskLevel.HIGH) {
+                    Log.d(TAG, "Atencao de contato confiavel; alerta suprimido")
+                    return
+                }
+                Log.d(TAG, "Fraude detectada pelo servidor | score=${result.score} | dbSynced=${result.dbSynced}")
+                SuspiciousMessageAlert.show(
+                    context = appContext,
+                    result = result,
+                    content = message.content,
+                    sourceName = message.source.name,
+                    capturedAt = message.capturedAt,
+                    fromTrustedContact = fromTrusted
+                )
+            } else {
+                Log.d(TAG, "Servidor descartou mensagem online")
             }
-            Log.d(TAG, "Fraude detectada pelo servidor | score=${result.score} | dbSynced=${result.dbSynced}")
-            SuspiciousMessageAlert.show(
-                context = appContext,
-                result = result,
-                content = message.content,
-                sourceName = message.source.name,
-                capturedAt = message.capturedAt,
-                fromTrustedContact = fromTrusted
-            )
-        } else {
-            Log.d(TAG, "Servidor descartou mensagem online")
+        } finally {
+            // Depois do alerta, para nao atrasa-lo; falha do cache nunca derruba o envio.
+            cacheDetail(message.content, result)
         }
+    }
+
+    private fun cacheDetail(content: String, result: FraudAnalysisResult) {
+        runCatching { AnalysisDetailCache.put(content, result.reasoning, result.indicators) }
+            .onFailure { Log.w(TAG, "Falha ao guardar detalhe da analise: ${it.javaClass.simpleName}") }
     }
 
     private suspend fun analyzeAndClearPending(message: AnalyzedMessage) {

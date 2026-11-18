@@ -1,6 +1,7 @@
 package com.example.antifraudagent
 
 import androidx.compose.foundation.background
+import com.example.antifraudagent.data.local.cache.AnalysisDetailCache
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -154,6 +155,8 @@ private fun readableJustification(hybrid: HybridVerdict?, raw: String?): String?
 fun RemoteFraudLog.toDetail(): AnalysisDetail {
     val hybrid = hybrid
     val verdict = verdictFor(isFraud, hybrid)
+    // O backend so guarda o veredito curto; raciocinio e sinais vem do cache local do /detect.
+    val cached = AnalysisDetailCache.get(content)
     return AnalysisDetail(
         kind = if (source.equals("call", true)) DetailKind.CALL else DetailKind.MESSAGE,
         title = sourceLabel(source),
@@ -162,8 +165,8 @@ fun RemoteFraudLog.toDetail(): AnalysisDetail {
         score = riskScore.meaningfulScore(),
         headline = headlineFor(verdict, source.equals("call", true)),
         justification = readableJustification(hybrid, explanation),
-        reasoning = null,
-        indicators = emptyList(),
+        reasoning = cached?.reasoning?.takeIf { it.isNotBlank() },
+        indicators = cached?.indicators.orEmpty(),
         localIndicators = emptyList(),
         hybrid = hybrid,
         excerpt = null,

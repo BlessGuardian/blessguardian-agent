@@ -1,5 +1,6 @@
 package com.example.antifraudagent
 
+import com.example.antifraudagent.data.local.cache.AnalysisDetailCache
 import android.util.Patterns
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -287,6 +288,8 @@ fun AccountSheet(onDismiss: () -> Unit) {
             if (current != null) {
                 LoggedInContent(current, onLogout = {
                     ScoreRepository.getInstance(context).clear()
+                    AnalysisDetailCache.init(context)
+                    AnalysisDetailCache.clear()
                     auth.logout()
                 })
             } else {

@@ -151,6 +151,14 @@ O histórico oficial de mensagens fica no servidor (DynamoDB). No aparelho, o Ro
 | `call_transcripts` | Histórico de ligações: transcrição, veredito e trecho que gerou o alerta |
 | `trusted_contacts` | Contatos confiáveis (nome e número). Nunca vai ao servidor |
 
+### Cache da análise detalhada (provisório)
+
+O histórico do servidor guarda só o veredito curto. Para o detalhe do Histórico mostrar a "Análise
+detalhada" e os "Sinais encontrados", o app guarda no aparelho (SharedPreferences, até 300 entradas) o
+que o `POST /detect` devolveu. Vale só neste aparelho e para mensagens analisadas depois desta versão,
+é apagado no logout e não entra no backup nem na transferência de aparelho. A correção definitiva é o
+backend gravar e devolver esses campos no `GET /logs` (detalhes no `AGENTS.md`).
+
 ---
 
 ## Permissões
