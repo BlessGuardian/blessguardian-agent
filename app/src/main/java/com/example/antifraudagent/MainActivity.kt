@@ -1256,13 +1256,7 @@ fun HistoryLogCard(log: RemoteFraudLog) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${sourceLabel(log.source)} · ${
-                        when (log.riskLevel) {
-                            RiskLevel.HIGH -> "golpe detectado"
-                            RiskLevel.ATTENTION -> "atenção"
-                            RiskLevel.SAFE -> "analisado"
-                        }
-                    }",
+                    text = sourceLabel(log.source),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -1488,11 +1482,12 @@ fun SecondaryActionButton(
         onClick = {},
         enabled = false,
         modifier = modifier.height(48.dp),
-        shape = RoundedCornerShape(14.dp)
+        shape = RoundedCornerShape(14.dp),
+        contentPadding = PaddingValues(horizontal = 8.dp)
     ) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(label)
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(label, maxLines = 1, softWrap = false, fontSize = 14.sp)
     }
 }
 
